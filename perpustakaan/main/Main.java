@@ -26,12 +26,12 @@ public class Main {
         HistoryServiceImpl realHistService = new HistoryServiceImpl();
         historyProxy = new HistoryServiceProxy(realHistService, currentRole);
 
-        // Data Seeding
-        LibraryDatabase db = LibraryDatabase.getInstance();
-        db.tambahBuku(BukuFactory.buatBuku("FISIK", "B01", "Java Coding Dasar", "Robert", "Teknologi", "Rak-A1"));
-        db.tambahBuku(BukuFactory.buatBuku("EBOOK", "B02", "Laskar Pelangi", "Andrea Hirata", "Fiksi", "12MB"));
-        Buku bSains = BukuFactory.buatBuku("FISIK", "B03", "Asal Usul Semesta", "Stephen H.", "Sains", "Rak-B3");
-        db.tambahBuku(new com.perpustakaan.model.BukuLangkaDecorator(bSains, 15000.0));
+        // // Data Seeding
+        // LibraryDatabase db = LibraryDatabase.getInstance();
+        // db.tambahBuku(BukuFactory.buatBuku("FISIK", "B01", "Java Coding Dasar", "Robert", "Teknologi", "Rak-A1"));
+        // db.tambahBuku(BukuFactory.buatBuku("EBOOK", "B02", "Laskar Pelangi", "Andrea Hirata", "Fiksi", "12MB"));
+        // Buku bSains = BukuFactory.buatBuku("FISIK", "B03", "Asal Usul Semesta", "Stephen H.", "Sains", "Rak-B3");
+        // db.tambahBuku(new com.perpustakaan.model.BukuLangkaDecorator(bSains, 15000.0));
 
         boolean berjalan = true;
         while (berjalan) {
@@ -110,6 +110,11 @@ public class Main {
                     boolean suksesKembali = libraryProxy.kembalikanBukuLayanan(idKembali, namaUserAktif);
                     if (suksesKembali) {
                         historyProxy.catatPengembalian(namaUserAktif, idKembali);
+                        LibraryDatabase.getInstance().simpanKeFile();
+                        System.out.println("[SISTEM]: Buku berhasil dikembalikan!");
+                    }
+                    else{
+                        System.out.println("[ERROR]: Gagal mengembalikan buku.");
                     }
                     break;
                 case 6:

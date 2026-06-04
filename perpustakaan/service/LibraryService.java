@@ -7,6 +7,8 @@ public interface LibraryService {
     void lihatSemuaBuku();
     void cariBuku(PencarianStrategy strategy, String keyword);
     void daftarkanBukuBaru(Buku buku);
-    void pinjamBukuLayanan(String idBuku);
-    void kembalikanBukuLayanan(String idBuku);
+    
+    // Mengubah return type menjadi boolean untuk pelaporan status ke Main & HistoryService
+    boolean pinjamBukuLayanan(String idBuku, String namaAnggota);
+    boolean kembalikanBukuLayanan(String idBuku, String namaAnggota);
 }

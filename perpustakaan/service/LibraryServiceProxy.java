@@ -18,26 +18,31 @@ public class LibraryServiceProxy implements LibraryService {
 
     @Override
     public void lihatSemuaBuku() {
+        // Semua role (Anggota, Pustakawan, Guest) diizinkan melihat katalog buku
         realService.lihatSemuaBuku();
     }
 
     @Override
     public void cariBuku(PencarianStrategy strategy, String keyword) {
+        // Semua role diizinkan melakukan pencarian buku
         realService.cariBuku(strategy, keyword);
     }
 
     @Override
-    public void pinjamBukuLayanan(String idBuku) {
-        realService.pinjamBukuLayanan(idBuku);
+    public boolean pinjamBukuLayanan(String idBuku, String namaAnggota) {
+        // Meneruskan eksekusi pinjam dan mengembalikan status sukses/gagal berupa boolean
+        return realService.pinjamBukuLayanan(idBuku, namaAnggota);
     }
 
     @Override
-    public void kembalikanBukuLayanan(String idBuku) {
-        realService.kembalikanBukuLayanan(idBuku);
+    public boolean kembalikanBukuLayanan(String idBuku, String namaAnggota) {
+        // Meneruskan eksekusi kembali dan mengembalikan status sukses/gagal berupa boolean
+        return realService.kembalikanBukuLayanan(idBuku, namaAnggota);
     }
 
     @Override
     public void daftarkanBukuBaru(Buku buku) {
+        // PROTEKSI KEAMANAN PROXY: Memblokir Anggota agar tidak bisa menambah koleksi buku
         if (userRoleSaatIni.equalsIgnoreCase("PUSTAKAWAN")) {
             realService.daftarkanBukuBaru(buku);
         } else {

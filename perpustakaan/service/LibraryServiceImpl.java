@@ -46,23 +46,34 @@ public class LibraryServiceImpl implements LibraryService {
         System.out.println("[SISTEM]: Berhasil mendaftarkan buku \"" + buku.getJudul() + "\" ke database.");
     }
 
+    // Mengembalikan status kelayakan (Boolean) agar kelas Main tahu transaksinya sukses/gagal
     @Override
-    public void pinjamBukuLayanan(String idBuku) {
+    public boolean pinjamBukuLayanan(String idBuku, String namaAnggota) {
         Buku buku = db.ambilBukuBerdasarkanId(idBuku);
         if (buku == null) {
             System.out.println("[ERROR]: Buku dengan ID \"" + idBuku + "\" tidak ditemukan!");
-            return;
+            return false;
         }
-        buku.pinjamBuku();
+
+        String stateAwal = buku.getState().getStatusName();
+        buku.pinjamBuku(); 
+        String stateAkhir = buku.getState().getStatusName();
+
+        return !stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Dipinjam");
     }
 
     @Override
-    public void kembalikanBukuLayanan(String idBuku) {
+    public boolean kembalikanBukuLayanan(String idBuku, String namaAnggota) {
         Buku buku = db.ambilBukuBerdasarkanId(idBuku);
         if (buku == null) {
             System.out.println("[ERROR]: Buku dengan ID \"" + idBuku + "\" tidak ditemukan!");
-            return;
+            return false;
         }
-        buku.kembalikanBuku();
+
+        String stateAwal = buku.getState().getStatusName();
+        buku.kembalikanBuku(); 
+        String stateAkhir = buku.getState().getStatusName();
+
+        return !stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Tersedia");
     }
 }

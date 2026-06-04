@@ -21,12 +21,20 @@ public class HistoryServiceImpl implements HistoryService {
 
     @Override
     public void catatPengembalian(String namaAnggota, String idBuku) {
+        boolean ditemukan = false;
         for (Transaksi t : db.ambilSemuaTransaksi()) {
-            if (t.getIdBuku().equals(idBuku) && t.getNamaAnggota().equalsIgnoreCase(namaAnggota) 
+            // REPAIR: Menggunakan trim() dan ignore case untuk akurasi pencarian ID di CLI
+            if (t.getIdBuku().trim().equalsIgnoreCase(idBuku.trim()) 
+                    && t.getNamaAnggota().trim().equalsIgnoreCase(namaAnggota.trim()) 
                     && t.getStatusTransaksi().equals("DIPINJAM")) {
+                
                 t.setStatusTransaksi("DIKEMBALIKAN");
+                ditemukan = true;
                 break;
             }
+        }
+        if (!ditemukan) {
+            System.out.println("[SISTEM INFO]: Log riwayat peminjaman aktif untuk buku ini tidak ditemukan.");
         }
     }
 

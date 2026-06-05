@@ -26,13 +26,6 @@ public class Main {
         HistoryServiceImpl realHistService = new HistoryServiceImpl();
         historyProxy = new HistoryServiceProxy(realHistService, currentRole);
 
-        // // Data Seeding
-        // LibraryDatabase db = LibraryDatabase.getInstance();
-        // db.tambahBuku(BukuFactory.buatBuku("FISIK", "B01", "Java Coding Dasar", "Robert", "Teknologi", "Rak-A1"));
-        // db.tambahBuku(BukuFactory.buatBuku("EBOOK", "B02", "Laskar Pelangi", "Andrea Hirata", "Fiksi", "12MB"));
-        // Buku bSains = BukuFactory.buatBuku("FISIK", "B03", "Asal Usul Semesta", "Stephen H.", "Sains", "Rak-B3");
-        // db.tambahBuku(new com.perpustakaan.model.BukuLangkaDecorator(bSains, 15000.0));
-
         boolean berjalan = true;
         while (berjalan) {
             System.out.println("\n==================================================");
@@ -165,13 +158,14 @@ public class Main {
 
     private static void prosesCariGenre() {
         System.out.println("\nPilih Genre yang Tersedia:");
-        for (int i = 0; i < CariBerdasarkanGenre.GENRE_LIST.length; i++) {
-            System.out.println((i + 1) + ". " + CariBerdasarkanGenre.GENRE_LIST[i]);
+        // Menyesuaikan loop dengan GENRE_LIST yang sudah bertipe List (menggunakan .size() dan .get())
+        for (int i = 0; i < CariBerdasarkanGenre.GENRE_LIST.size(); i++) {
+            System.out.println((i + 1) + ". " + CariBerdasarkanGenre.GENRE_LIST.get(i));
         }
         System.out.print("Pilih angka genre: ");
         int indexGenre = membacaInputAngka() - 1;
-        if (indexGenre >= 0 && indexGenre < CariBerdasarkanGenre.GENRE_LIST.length) {
-            String genreDipilih = CariBerdasarkanGenre.GENRE_LIST[indexGenre];
+        if (indexGenre >= 0 && indexGenre < CariBerdasarkanGenre.GENRE_LIST.size()) {
+            String genreDipilih = CariBerdasarkanGenre.GENRE_LIST.get(indexGenre);
             libraryProxy.cariBuku(new CariBerdasarkanGenre(), genreDipilih);
         } else {
             System.out.println("[ERROR]: Pilihan genre tidak valid.");
@@ -182,21 +176,43 @@ public class Main {
         System.out.println("\n--- FORM TAMBAH BUKU BARU ---");
         System.out.print("Masukkan Tipe Buku (FISIK / EBOOK): ");
         String tipe = scanner.nextLine().toUpperCase();
-        System.out.print("Masukkan ID Buku (misal: B04): ");
-        String id = scanner.nextLine();
+        
+        // ID OTOMATIS GENERATE
+        String id = LibraryDatabase.getInstance().generateNextBookId();
+        System.out.println("ID Buku Otomatis Dibuat: " + id);
+
         System.out.print("Masukkan Judul Buku: ");
         String judul = scanner.nextLine();
         System.out.print("Masukkan Pengarang: ");
         String pengarang = scanner.nextLine();
         
         System.out.println("Pilih Genre:");
-        for (int i = 0; i < CariBerdasarkanGenre.GENRE_LIST.length; i++) {
-            System.out.println((i + 1) + ". " + CariBerdasarkanGenre.GENRE_LIST[i]);
+        // Loop menampilkan daftar genre dari database CSV
+        for (int i = 0; i < CariBerdasarkanGenre.GENRE_LIST.size(); i++) {
+            System.out.println((i + 1) + ". " + CariBerdasarkanGenre.GENRE_LIST.get(i));
         }
+        // Menyediakan opsi dinamis di baris paling bawah untuk menambah genre baru
+        System.out.println((CariBerdasarkanGenre.GENRE_LIST.size() + 1) + ". [Tambah / Ketik Genre Baru]");
         System.out.print("Pilihan angka genre: ");
         int indexGenre = membacaInputAngka() - 1;
-        String genre = (indexGenre >= 0 && indexGenre < CariBerdasarkanGenre.GENRE_LIST.length) 
-                        ? CariBerdasarkanGenre.GENRE_LIST[indexGenre] : "Umum";
+        
+        String genre = "";
+        // Jika memilih opsi paling bawah (Tambah Genre Baru)
+        if (indexGenre == CariBerdasarkanGenre.GENRE_LIST.size()) {
+            System.out.print("Masukkan nama Genre Baru yang ingin ditambahkan: ");
+            String genreBaruInput = scanner.nextLine();
+            if (!genreBaruInput.trim().isEmpty()) {
+                // Simpan permanen ke file genre.csv lewat method baru di database
+                LibraryDatabase.getInstance().simpanGenreBaruKeCSV(genreBaruInput);
+                genre = genreBaruInput.trim();
+            } else {
+                genre = "Umum";
+            }
+        } else if (indexGenre >= 0 && indexGenre < CariBerdasarkanGenre.GENRE_LIST.size()) {
+            genre = CariBerdasarkanGenre.GENRE_LIST.get(indexGenre);
+        } else {
+            genre = "Umum";
+        }
 
         String infoSpesifik = "";
         if (tipe.equals("FISIK")) {

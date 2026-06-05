@@ -6,7 +6,18 @@ import java.util.List;
 
 public class CariBerdasarkanGenre implements PencarianStrategy {
     
-    public static final String[] GENRE_LIST = {"Teknologi", "Fiksi", "Sains", "Sejarah"};
+    // Sekarang penampung list genre dibuat dinamis tanpa hard-code data awal
+    public static final List<String> GENRE_LIST = new ArrayList<>();
+
+    // Fungsi pembantu untuk menambah genre baru ke dalam list RAM (Runtime)
+    public static void tambahGenreBaruKeList(String genreBaru) {
+        for (String g : GENRE_LIST) {
+            if (g.equalsIgnoreCase(genreBaru.trim())) {
+                return; // Jika sudah ada, abaikan agar tidak duplikat
+            }
+        }
+        GENRE_LIST.add(genreBaru.trim());
+    }
 
     @Override
     public List<Buku> eksekusiCari(List<Buku> daftarBuku, String keyword) {

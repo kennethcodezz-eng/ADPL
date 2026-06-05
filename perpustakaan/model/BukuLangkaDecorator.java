@@ -11,6 +11,6 @@ public class BukuLangkaDecorator extends BukuDecorator {
     @Override
     public String tampilkanInfo() {
         // Menambahkan teks dekorasi [KOLEKSI LANGKA] di depan info asli buku
-        return "⭐ [KOLEKSI LANGKA] " + bukuYangDekor.tampilkanInfo() + " (Tarif Denda: Rp " + tarifDendaKhusus + "/hari)";
+        return "[KOLEKSI LANGKA] " + bukuYangDekor.tampilkanInfo() + " (Tarif Denda: Rp " + tarifDendaKhusus + "/hari)";
     }
 }

@@ -6,11 +6,13 @@ import com.perpustakaan.model.EBook;
 import com.perpustakaan.model.BukuLangkaDecorator;
 import com.perpustakaan.model.Transaksi;
 import com.perpustakaan.state.DipinjamState;
+import com.perpustakaan.strategy.CariBerdasarkanGenre;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,16 +24,19 @@ public class LibraryDatabase {
     private Map<String, Buku> tabelBuku;
     private List<Transaksi> daftarTransaksi; 
 
-    // Definisi 3 File CSV terpisah sebagai tabel database
+    private int counterBuku = 1;
+
+    // Lokasi berkas database CSV
     private static final String FILE_FISIK = "buku_fisik.csv";
     private static final String FILE_EBOOK = "ebook.csv";
     private static final String FILE_TRANSAKSI = "transaksi.csv";
+    private static final String FILE_GENRE = "genre.csv"; // File CSV baru untuk menyimpan genre
 
     private LibraryDatabase() {
         tabelBuku = new HashMap<>();
         daftarTransaksi = new ArrayList<>(); 
         
-        // Membaca semua baris CSV saat aplikasi menyala
+        // Membaca semua baris CSV termasuk data genre saat aplikasi menyala
         muatDariFile();
     }
 
@@ -42,28 +47,63 @@ public class LibraryDatabase {
         return instance;
     }
 
-    // --- MANAJEMEN DATA BUKU (TRUE APPEND - OPSI 1) ---
+    public String generateNextBookId() {
+        return "B" + String.format("%02d", counterBuku++);
+    }
+
+    private void updateCounterBuku(String id) {
+        try {
+            if (id.startsWith("B")) {
+                int nomorId = Integer.parseInt(id.substring(1).trim());
+                if (nomorId >= counterBuku) {
+                    counterBuku = nomorId + 1;
+                }
+            }
+        } catch (NumberFormatException e) {
+            // Abaikan jika format ID tidak standar
+        }
+    }
+
+    // --- FITUR PERMANENSI GENRE BARU KE CSV ---
+    public void simpanGenreBaruKeCSV(String genreBaru) {
+        String genreClean = genreBaru.trim();
+        // 1. Cek duplikasi di RAM terlebih dahulu
+        for (String g : CariBerdasarkanGenre.GENRE_LIST) {
+            if (g.equalsIgnoreCase(genreClean)) {
+                System.out.println("[PERINGATAN]: Genre \"" + genreClean + "\" sudah ada di dalam sistem.");
+                return;
+            }
+        }
+        
+        // 2. Masukkan ke RAM list
+        CariBerdasarkanGenre.tambahGenreBaruKeList(genreClean);
+        
+        // 3. Tulis permanen (Append) ke dalam genre.csv
+        try (PrintWriter out = new PrintWriter(new FileWriter(FILE_GENRE, true))) {
+            out.println(genreClean);
+            System.out.println("[SISTEM]: Berhasil menambahkan genre baru ke CSV: " + genreClean);
+        } catch (IOException e) {
+            System.out.println("[ERROR DATABASE]: Gagal menyimpan genre baru ke berkas CSV.");
+        }
+    }
+
+    // --- MANAJEMEN DATA BUKU (TRUE APPEND) ---
     public void tambahBuku(Buku buku) {
-        // 1. Masukkan ke dalam Map RAM agar sinkron saat aplikasi berjalan
         tabelBuku.put(buku.getId(), buku);
         
-        // 2. Deteksi kelangkaan (Decorator Pattern)
         boolean isLangka = (buku instanceof BukuLangkaDecorator);
         Buku objekAsli = buku;
         if (isLangka) {
             objekAsli = membongkarDecorator(buku);
         }
 
-        // 3. Lakukan Append ke file CSV yang sesuai (menggunakan parameter 'true' pada FileWriter)
         if (objekAsli instanceof BukuFisik) {
-            // Parameter 'true' membuat data otomatis tertulis di BARIS PALING BAWAH
             try (PrintWriter out = new PrintWriter(new FileWriter(FILE_FISIK, true))) {
                 String info = objekAsli.tampilkanInfo();
                 String rak = "Rak-Umum";
                 if (info.contains("Rak: ")) {
                     rak = info.substring(info.indexOf("Rak: ") + 5, info.indexOf(" ->"));
                 }
-                // Tulis satu baris baru di akhir file CSV fisik
                 out.printf("%s,%s,%s,%s,%s,%s,%b\n", 
                     buku.getId(), buku.getJudul(), buku.getPengarang(), 
                     buku.getGenre(), rak, buku.getState().getStatusName(), isLangka);
@@ -72,14 +112,12 @@ public class LibraryDatabase {
             }
             
         } else if (objekAsli instanceof EBook) {
-            // Parameter 'true' membuat data otomatis tertulis di BARIS PALING BAWAH
             try (PrintWriter out = new PrintWriter(new FileWriter(FILE_EBOOK, true))) {
                 String info = objekAsli.tampilkanInfo();
                 String ukuran = "Unknown-Size";
                 if (info.contains("Digital: ")) {
                     ukuran = info.substring(info.indexOf("Digital: ") + 9, info.indexOf(" ->"));
                 }
-                // Tulis satu baris baru di akhir file CSV ebook
                 out.printf("%s,%s,%s,%s,%s,%s,%b\n", 
                     buku.getId(), buku.getJudul(), buku.getPengarang(), 
                     buku.getGenre(), ukuran, buku.getState().getStatusName(), isLangka);
@@ -97,11 +135,8 @@ public class LibraryDatabase {
         return new ArrayList<>(tabelBuku.values());
     }
 
-    // --- MANAJEMEN DATA TRANSAKSI (APPEND) ---
     public void tambahTransaksi(Transaksi trx) {
         daftarTransaksi.add(trx);
-        
-        // Menggunakan mode append 'true' agar transaksi baru menempel di baris paling bawah csv
         try (PrintWriter out = new PrintWriter(new FileWriter(FILE_TRANSAKSI, true))) {
             out.printf("%s,%s,%s,%s,%s\n", 
                 trx.getIdTransaksi(), trx.getNamaAnggota(), 
@@ -115,14 +150,11 @@ public class LibraryDatabase {
         return daftarTransaksi;
     }
 
-    // --- MANAJEMEN UPDATE STATE (OVERWRITE KHUSUS UPDATE STATUS PINJAM/KEMBALI) ---
-    // Method ini dipanggil saat state buku berubah atau status transaksi di-update (DIPINJAM -> DIKEMBALIKAN)
     public void simpanKeFile() {
         try (PrintWriter outFisik = new PrintWriter(new FileWriter(FILE_FISIK));
              PrintWriter outEbook = new PrintWriter(new FileWriter(FILE_EBOOK));
              PrintWriter outTrx = new PrintWriter(new FileWriter(FILE_TRANSAKSI))) {
             
-            // 1. Tulis ulang status buku terbaru dari memory RAM ke CSV
             for (Buku buku : tabelBuku.values()) {
                 String id = buku.getId();
                 String judul = buku.getJudul();
@@ -153,7 +185,6 @@ public class LibraryDatabase {
                 }
             }
 
-            // 2. Tulis ulang semua status transaksi terbaru ke CSV
             for (Transaksi t : daftarTransaksi) {
                 outTrx.printf("%s,%s,%s,%s,%s\n", t.getIdTransaksi(), t.getNamaAnggota(), t.getIdBuku(), t.getJudulBuku(), t.getStatusTransaksi());
             }
@@ -163,7 +194,6 @@ public class LibraryDatabase {
         }
     }
 
-    // Fungsi helper reflektif untuk mengambil referensi target di dalam decorator
     private Buku membongkarDecorator(Buku bukuDekor) {
         try {
             java.lang.reflect.Field field = com.perpustakaan.model.BukuDecorator.class.getDeclaredField("bukuYangDekor");
@@ -174,11 +204,35 @@ public class LibraryDatabase {
         }
     }
 
-    // --- CORE ENGINE: READ & PARSE DARI DATA CSV ---
     private void muatDariFile() {
+        muatGenre(); // Harus dipanggil paling pertama sebelum memuat buku
         muatBukuFisik();
         muatEbook();
         muatTransaksi();
+    }
+
+    private void muatGenre() {
+        File file = new File(FILE_GENRE);
+        // Jika file belum ada, buat baru dan isi dengan genre bawaan tugasmu
+        if (!file.exists()) {
+            try (PrintWriter out = new PrintWriter(new FileWriter(file))) {
+                out.println("Teknologi");
+                out.println("Fiksi");
+                out.println("Sains");
+                out.println("Sejarah");
+            } catch (IOException e) {
+                System.out.println("[ERROR]: Gagal menginisialisasi berkas genre.");
+            }
+        }
+
+        // Baca seluruh isi genre dari CSV ke dalam program
+        try (BufferedReader br = new BufferedReader(new FileReader(FILE_GENRE))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                CariBerdasarkanGenre.tambahGenreBaruKeList(line.trim());
+            }
+        } catch (IOException e) { /* Abaikan */ }
     }
 
     private void muatBukuFisik() {
@@ -190,6 +244,8 @@ public class LibraryDatabase {
                 String[] data = line.split(",");
                 if (data.length < 6) continue;
                 
+                updateCounterBuku(data[0]);
+
                 Buku buku = BukuFactory.buatBuku("FISIK", data[0], data[1], data[2], data[3], data[4]);
                 
                 if (data[5].trim().equalsIgnoreCase("Dipinjam")) {
@@ -197,12 +253,12 @@ public class LibraryDatabase {
                 }
                 
                 if (data.length >= 7 && Boolean.parseBoolean(data[6].trim())) {
-                    buku = new BukuLangkaDecorator(buku, 20000.0);
+                    buku = new com.perpustakaan.model.BukuLangkaDecorator(buku, 20000.0);
                 }
                 
                 tabelBuku.put(buku.getId(), buku);
             }
-        } catch (IOException e) { /* File belum ada, abaikan secara aman */ }
+        } catch (IOException e) { /* Abaikan jika file belum ada */ }
     }
 
     private void muatEbook() {
@@ -214,6 +270,8 @@ public class LibraryDatabase {
                 String[] data = line.split(",");
                 if (data.length < 6) continue;
                 
+                updateCounterBuku(data[0]);
+
                 Buku buku = BukuFactory.buatBuku("EBOOK", data[0], data[1], data[2], data[3], data[4]);
                 
                 if (data[5].trim().equalsIgnoreCase("Dipinjam")) {
@@ -221,12 +279,12 @@ public class LibraryDatabase {
                 }
                 
                 if (data.length >= 7 && Boolean.parseBoolean(data[6].trim())) {
-                    buku = new BukuLangkaDecorator(buku, 20000.0);
+                    buku = new com.perpustakaan.model.BukuLangkaDecorator(buku, 20000.0);
                 }
                 
                 tabelBuku.put(buku.getId(), buku);
             }
-        } catch (IOException e) { /* File belum ada, abaikan secara aman */ }
+        } catch (IOException e) { /* Abaikan jika file belum ada */ }
     }
 
     private void muatTransaksi() {
@@ -242,6 +300,6 @@ public class LibraryDatabase {
                 trx.setStatusTransaksi(data[4].trim());
                 daftarTransaksi.add(trx);
             }
-        } catch (IOException e) { /* File belum ada, abaikan secara aman */ }
+        } catch (IOException e) { /* Abaikan jika file belum ada */ }
     }
 }

@@ -14,15 +14,26 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     public void lihatSemuaBuku() {
-        List<Buku> daftarBuku = db.ambilSemuaBuku();
+        // 1. Ambil semua data buku dari database RAM
+        List<com.perpustakaan.model.Buku> daftarBuku = db.ambilSemuaBuku();
+
         if (daftarBuku.isEmpty()) {
-            System.out.println("[INFO]: Koleksi perpustakaan masih kosong.");
+            System.out.println("[INFO]: Belum ada koleksi buku di perpustakaan.");
             return;
         }
-        System.out.println("\n=== DAFTAR KOLEKSI BUKU ===");
-        for (Buku buku : daftarBuku) {
+
+        // 2. PROSES SORTING BERDASARKAN ID BUKU (A-Z)
+        // Kita bandingkan ID Buku 1 dengan ID Buku 2 secara alfabetis/numerik
+        daftarBuku.sort((b1, b2) -> b1.getId().compareToIgnoreCase(b2.getId()));
+
+        // 3. Cetak daftar buku yang sudah rapi dan berurutan
+        System.out.println("\n=================================================================================");
+        System.out.println("                         DAFTAR LENGKAP KOLEKSI BUKU                             ");
+        System.out.println("=================================================================================");
+        for (com.perpustakaan.model.Buku buku : daftarBuku) {
             System.out.println(buku.tampilkanInfo());
         }
+        System.out.println("=================================================================================");
     }
 
     @Override

@@ -42,10 +42,51 @@ public class LibraryDatabase {
         return instance;
     }
 
-    // --- MANAJEMEN DATA BUKU ---
+    // --- MANAJEMEN DATA BUKU (TRUE APPEND - OPSI 1) ---
     public void tambahBuku(Buku buku) {
+        // 1. Masukkan ke dalam Map RAM agar sinkron saat aplikasi berjalan
         tabelBuku.put(buku.getId(), buku);
-        simpanKeFile(); // Tulis otomatis ke CSV setiap ada perubahan buku
+        
+        // 2. Deteksi kelangkaan (Decorator Pattern)
+        boolean isLangka = (buku instanceof BukuLangkaDecorator);
+        Buku objekAsli = buku;
+        if (isLangka) {
+            objekAsli = membongkarDecorator(buku);
+        }
+
+        // 3. Lakukan Append ke file CSV yang sesuai (menggunakan parameter 'true' pada FileWriter)
+        if (objekAsli instanceof BukuFisik) {
+            // Parameter 'true' membuat data otomatis tertulis di BARIS PALING BAWAH
+            try (PrintWriter out = new PrintWriter(new FileWriter(FILE_FISIK, true))) {
+                String info = objekAsli.tampilkanInfo();
+                String rak = "Rak-Umum";
+                if (info.contains("Rak: ")) {
+                    rak = info.substring(info.indexOf("Rak: ") + 5, info.indexOf(" ->"));
+                }
+                // Tulis satu baris baru di akhir file CSV fisik
+                out.printf("%s,%s,%s,%s,%s,%s,%b\n", 
+                    buku.getId(), buku.getJudul(), buku.getPengarang(), 
+                    buku.getGenre(), rak, buku.getState().getStatusName(), isLangka);
+            } catch (IOException e) {
+                System.out.println("[ERROR DATABASE]: Gagal melakukan append data buku fisik.");
+            }
+            
+        } else if (objekAsli instanceof EBook) {
+            // Parameter 'true' membuat data otomatis tertulis di BARIS PALING BAWAH
+            try (PrintWriter out = new PrintWriter(new FileWriter(FILE_EBOOK, true))) {
+                String info = objekAsli.tampilkanInfo();
+                String ukuran = "Unknown-Size";
+                if (info.contains("Digital: ")) {
+                    ukuran = info.substring(info.indexOf("Digital: ") + 9, info.indexOf(" ->"));
+                }
+                // Tulis satu baris baru di akhir file CSV ebook
+                out.printf("%s,%s,%s,%s,%s,%s,%b\n", 
+                    buku.getId(), buku.getJudul(), buku.getPengarang(), 
+                    buku.getGenre(), ukuran, buku.getState().getStatusName(), isLangka);
+            } catch (IOException e) {
+                System.out.println("[ERROR DATABASE]: Gagal melakukan append data ebook.");
+            }
+        }
     }
 
     public Buku ambilBukuBerdasarkanId(String id) {
@@ -56,23 +97,32 @@ public class LibraryDatabase {
         return new ArrayList<>(tabelBuku.values());
     }
 
-    // --- MANAJEMEN DATA TRANSAKSI ---
+    // --- MANAJEMEN DATA TRANSAKSI (APPEND) ---
     public void tambahTransaksi(Transaksi trx) {
         daftarTransaksi.add(trx);
-        simpanKeFile(); // Tulis otomatis ke CSV setiap ada transaksi baru
+        
+        // Menggunakan mode append 'true' agar transaksi baru menempel di baris paling bawah csv
+        try (PrintWriter out = new PrintWriter(new FileWriter(FILE_TRANSAKSI, true))) {
+            out.printf("%s,%s,%s,%s,%s\n", 
+                trx.getIdTransaksi(), trx.getNamaAnggota(), 
+                trx.getIdBuku(), trx.getJudulBuku(), trx.getStatusTransaksi());
+        } catch (IOException e) {
+            System.out.println("[ERROR DATABASE]: Gagal melakukan append data transaksi.");
+        }
     }
 
     public List<Transaksi> ambilSemuaTransaksi() {
         return daftarTransaksi;
     }
 
-    // --- CORE ENGINE: SAVE & WRITE PERMANEN KE CSV ---
+    // --- MANAJEMEN UPDATE STATE (OVERWRITE KHUSUS UPDATE STATUS PINJAM/KEMBALI) ---
+    // Method ini dipanggil saat state buku berubah atau status transaksi di-update (DIPINJAM -> DIKEMBALIKAN)
     public void simpanKeFile() {
         try (PrintWriter outFisik = new PrintWriter(new FileWriter(FILE_FISIK));
              PrintWriter outEbook = new PrintWriter(new FileWriter(FILE_EBOOK));
              PrintWriter outTrx = new PrintWriter(new FileWriter(FILE_TRANSAKSI))) {
             
-            // 1. Iterasi dan simpan semua objek buku di dalam Map Memory
+            // 1. Tulis ulang status buku terbaru dari memory RAM ke CSV
             for (Buku buku : tabelBuku.values()) {
                 String id = buku.getId();
                 String judul = buku.getJudul();
@@ -80,58 +130,47 @@ public class LibraryDatabase {
                 String genre = buku.getGenre();
                 String status = buku.getState().getStatusName();
                 
-                // Deteksi Decorator Pattern secara akurat 
                 boolean isLangka = (buku instanceof BukuLangkaDecorator);
-                
-                // Kupas objek asli yang berada di dalam decorator jika memang didekorasi
                 Buku objekAsli = buku;
                 if (isLangka) {
-                    // Karena kita butuh mengambil info spesifik (rak/ukuran) dari class konkret asli
                     objekAsli = membongkarDecorator(buku);
                 }
 
-                // Simpan berdasarkan tipe konkret internalnya masing-masing
                 if (objekAsli instanceof BukuFisik) {
                     String info = objekAsli.tampilkanInfo();
-                    // Ekstraksi posisi Rak dari teks format asli BukuFisik
                     String rak = "Rak-Umum";
                     if (info.contains("Rak: ")) {
                         rak = info.substring(info.indexOf("Rak: ") + 5, info.indexOf(" ->"));
                     }
-                    // Format baru: ID,Judul,Pengarang,Genre,Rak,Status,isLangka
                     outFisik.printf("%s,%s,%s,%s,%s,%s,%b\n", id, judul, pengarang, genre, rak, status, isLangka);
-                    
                 } else if (objekAsli instanceof EBook) {
                     String info = objekAsli.tampilkanInfo();
-                    // Ekstraksi ukuran file dari teks format asli EBook
                     String ukuran = "Unknown-Size";
                     if (info.contains("Digital: ")) {
                         ukuran = info.substring(info.indexOf("Digital: ") + 9, info.indexOf(" ->"));
                     }
-                    // Format baru: ID,Judul,Pengarang,Genre,UkuranFile,Status,isLangka
                     outEbook.printf("%s,%s,%s,%s,%s,%s,%b\n", id, judul, pengarang, genre, ukuran, status, isLangka);
                 }
             }
 
-            // 2. Simpan Riwayat Transaksi Global
+            // 2. Tulis ulang semua status transaksi terbaru ke CSV
             for (Transaksi t : daftarTransaksi) {
                 outTrx.printf("%s,%s,%s,%s,%s\n", t.getIdTransaksi(), t.getNamaAnggota(), t.getIdBuku(), t.getJudulBuku(), t.getStatusTransaksi());
             }
 
         } catch (IOException e) {
-            System.out.println("[ERROR DATABASE]: Gagal melakukan sinkronisasi data permanen ke berkas CSV.");
+            System.out.println("[ERROR DATABASE]: Gagal memperbarui status data pada berkas CSV.");
         }
     }
 
     // Fungsi helper reflektif untuk mengambil referensi target di dalam decorator
     private Buku membongkarDecorator(Buku bukuDekor) {
         try {
-            // Menggunakan teknik Java Reflection secara aman untuk mengambil field "bukuYangDekor" milik abstract class BukuDecorator
             java.lang.reflect.Field field = com.perpustakaan.model.BukuDecorator.class.getDeclaredField("bukuYangDekor");
             field.setAccessible(true);
             return (Buku) field.get(bukuDekor);
         } catch (Exception e) {
-            return bukuDekor; // fallback jika gagal
+            return bukuDekor; 
         }
     }
 
@@ -151,15 +190,12 @@ public class LibraryDatabase {
                 String[] data = line.split(",");
                 if (data.length < 6) continue;
                 
-                // 1. Instansiasi objek melalui Factory Method Pattern
                 Buku buku = BukuFactory.buatBuku("FISIK", data[0], data[1], data[2], data[3], data[4]);
                 
-                // 2. Rekonstruksi State Internal Objek Buku
                 if (data[5].trim().equalsIgnoreCase("Dipinjam")) {
                     buku.setState(new DipinjamState());
                 }
                 
-                // 3. Rekonstruksi Bungkus Decorator Pattern jika di CSV bernilai true
                 if (data.length >= 7 && Boolean.parseBoolean(data[6].trim())) {
                     buku = new BukuLangkaDecorator(buku, 20000.0);
                 }
@@ -178,15 +214,12 @@ public class LibraryDatabase {
                 String[] data = line.split(",");
                 if (data.length < 6) continue;
                 
-                // 1. Instansiasi objek melalui Factory Method Pattern
                 Buku buku = BukuFactory.buatBuku("EBOOK", data[0], data[1], data[2], data[3], data[4]);
                 
-                // 2. Rekonstruksi State Internal Objek Buku
                 if (data[5].trim().equalsIgnoreCase("Dipinjam")) {
                     buku.setState(new DipinjamState());
                 }
                 
-                // 3. Rekonstruksi Bungkus Decorator Pattern jika di CSV bernilai true
                 if (data.length >= 7 && Boolean.parseBoolean(data[6].trim())) {
                     buku = new BukuLangkaDecorator(buku, 20000.0);
                 }

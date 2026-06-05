@@ -13,57 +13,93 @@ public class Main {
     private static String currentRole = "GUEST"; 
     private static String namaUserAktif = ""; 
     
-    // Kita deklarasikan dua tameng proxy terpisah
+    // Proxy tetap dideklarasikan
     private static LibraryServiceProxy libraryProxy;
     private static HistoryServiceProxy historyProxy;
 
     public static void main(String[] args) {
-        // Inisialisasi Kelompok Layanan Buku
         LibraryServiceImpl realLibService = new LibraryServiceImpl();
         libraryProxy = new LibraryServiceProxy(realLibService, currentRole);
-
-        // Inisialisasi Kelompok Layanan Riwayat (KELAS BARU)
+        
         HistoryServiceImpl realHistService = new HistoryServiceImpl();
         historyProxy = new HistoryServiceProxy(realHistService, currentRole);
+
+        LibraryDatabase db = LibraryDatabase.getInstance();
+
+        System.out.println("Memuat sistem perpustakaan...");
 
         boolean berjalan = true;
         while (berjalan) {
             System.out.println("\n==================================================");
-            System.out.println("  SELAMAT DATANG DI SISTEM MANAJEMEN PERPUSTAKAAN  ");
+            System.out.println("  PORTAL LOGIN PERPUSTAKAAN (AUTENTIKASI)");
             System.out.println("==================================================");
-            System.out.println("1. Masuk sebagai ANGGOTA PERPUSTAKAAN");
-            System.out.println("2. Masuk sebagai PUSTAKAWAN (ADMIN)");
+            System.out.println("1. Login");
+            System.out.println("2. Buat Akun Baru (Register)");
             System.out.println("3. Keluar Aplikasi");
             System.out.print("Pilihan Anda (1-3): ");
             
             int pilihan = membacaInputAngka();
             switch (pilihan) {
                 case 1:
-                    System.out.print("Masukkan Nama Anda: ");
-                    namaUserAktif = scanner.nextLine();
-                    currentRole = "ANGGOTA";
-                    libraryProxy.setUserRoleSaatIni(currentRole);
-                    historyProxy.setUserRoleSaatIni(currentRole); // Sinkronisasi role ke proxy riwayat
-                    System.out.println("\n[SISTEM]: Login Berhasil sebagai Anggota: " + namaUserAktif.toUpperCase());
-                    tampilkanMenuAnggota(); 
+                    System.out.println("\n--- MENU LOGIN ---");
+                    System.out.print("Masukkan Username: ");
+                    String username = scanner.nextLine();
+                    System.out.print("Masukkan Password: ");
+                    String password = scanner.nextLine();
+
+                    // Mengirim input ke LibraryDatabase untuk divalidasi
+                    String role = db.loginUser(username, password);
+
+                    if (role == null) {
+                        System.out.println("[ERROR]: Username tidak ditemukan atau Password salah!");
+                    } else if (role.equals("ADMIN")) {
+                        namaUserAktif = username;
+                        currentRole = "PUSTAKAWAN";
+                        libraryProxy.setUserRoleSaatIni(currentRole);
+                        historyProxy.setUserRoleSaatIni(currentRole);
+                        System.out.println("\n[SISTEM]: Login Berhasil sebagai PUSTAKAWAN: " + username.toUpperCase());
+                        tampilkanMenuPustakawan(); 
+                    } else if (role.equals("ANGGOTA")) {
+                        namaUserAktif = username;
+                        currentRole = "ANGGOTA";
+                        libraryProxy.setUserRoleSaatIni(currentRole);
+                        historyProxy.setUserRoleSaatIni(currentRole);
+                        System.out.println("\n[SISTEM]: Login Berhasil sebagai Anggota: " + username.toUpperCase());
+                        tampilkanMenuAnggota(); 
+                    }
                     break;
+
                 case 2:
-                    namaUserAktif = "Pustakawan Admin";
-                    currentRole = "PUSTAKAWAN";
-                    libraryProxy.setUserRoleSaatIni(currentRole);
-                    historyProxy.setUserRoleSaatIni(currentRole); // Sinkronisasi role ke proxy riwayat
-                    System.out.println("\n[SISTEM]: Login Berhasil sebagai PUSTAKAWAN.");
-                    tampilkanMenuPustakawan(); 
+                    System.out.println("\n--- PENDAFTARAN ANGGOTA BARU ---");
+                    System.out.print("Masukkan Username Baru: ");
+                    String newUsername = scanner.nextLine();
+                    System.out.print("Masukkan Password Baru: ");
+                    String newPassword = scanner.nextLine();
+
+                    // Proses registrasi via LibraryDatabase
+                    boolean sukses = db.registerUser(newUsername, newPassword, "ANGGOTA");
+                    
+                    if (sukses) {
+                        System.out.println("[SISTEM]: Registrasi berhasil! Silakan Login menggunakan akun baru Anda.");
+                    } else {
+                        System.out.println("[ERROR]: Username sudah dipakai, silakan cari username lain.");
+                    }
                     break;
+
                 case 3:
                     berjalan = false;
-                    System.out.println("\n[SISTEM]: Terima kasih!");
+                    System.out.println("\n[SISTEM]: Menutup sistem... Terima kasih!");
                     break;
+
                 default:
                     System.out.println("[PERINGATAN]: Pilihan tidak valid!");
             }
         }
     }
+
+    // =========================================================================
+    // FUNGSI MENU DAN INPUT (Tidak banyak berubah dari aslinya, hanya penyesuaian)
+    // =========================================================================
 
     private static void tampilkanMenuAnggota() {
         boolean diMenuAnggota = true;
@@ -90,7 +126,6 @@ public class Main {
                 case 4:
                     System.out.print("Masukkan ID Buku yang ingin dipinjam: ");
                     String idPinjam = scanner.nextLine();
-                    // Jalankan layanan buku, jika sukses ganti state, catat ke history service
                     boolean suksesPinjam = libraryProxy.pinjamBukuLayanan(idPinjam, namaUserAktif);
                     if (suksesPinjam) {
                         Buku b = LibraryDatabase.getInstance().ambilBukuBerdasarkanId(idPinjam);
@@ -103,15 +138,14 @@ public class Main {
                     boolean suksesKembali = libraryProxy.kembalikanBukuLayanan(idKembali, namaUserAktif);
                     if (suksesKembali) {
                         historyProxy.catatPengembalian(namaUserAktif, idKembali);
-                        LibraryDatabase.getInstance().simpanKeFile();
+                        LibraryDatabase.getInstance().simpanKeFile(); // Paksa update CSV saat buku kembali
                         System.out.println("[SISTEM]: Buku berhasil dikembalikan!");
-                    }
-                    else{
+                    } else {
                         System.out.println("[ERROR]: Gagal mengembalikan buku.");
                     }
                     break;
                 case 6:
-                    historyProxy.lihatBukuDipinjamAnggota(namaUserAktif); // Pindah tanggung jawab ke historyProxy
+                    historyProxy.lihatBukuDipinjamAnggota(namaUserAktif); 
                     break;
                 case 7:
                     diMenuAnggota = false;
@@ -141,7 +175,7 @@ public class Main {
             switch (opsi) {
                 case 1: libraryProxy.lihatSemuaBuku(); break;
                 case 2: prosesInputBukuBaru(); break;
-                case 3: historyProxy.lihatSemuaRiwayatTransaksi(); break; // Diambil alih historyProxy
+                case 3: historyProxy.lihatSemuaRiwayatTransaksi(); break; 
                 case 4:
                     diMenuPustakawan = false;
                     currentRole = "GUEST";
@@ -158,7 +192,6 @@ public class Main {
 
     private static void prosesCariGenre() {
         System.out.println("\nPilih Genre yang Tersedia:");
-        // Menyesuaikan loop dengan GENRE_LIST yang sudah bertipe List (menggunakan .size() dan .get())
         for (int i = 0; i < CariBerdasarkanGenre.GENRE_LIST.size(); i++) {
             System.out.println((i + 1) + ". " + CariBerdasarkanGenre.GENRE_LIST.get(i));
         }
@@ -177,7 +210,8 @@ public class Main {
         System.out.print("Masukkan Tipe Buku (FISIK / EBOOK): ");
         String tipe = scanner.nextLine().toUpperCase();
         
-        // ID OTOMATIS GENERATE
+        // Peringatan: Pastikan method generateNextBookId() ada di LibraryDatabase milikmu!
+        // Jika belum ada, ganti id ini dengan manual input seperti: String id = scanner.nextLine();
         String id = LibraryDatabase.getInstance().generateNextBookId();
         System.out.println("ID Buku Otomatis Dibuat: " + id);
 
@@ -187,23 +221,19 @@ public class Main {
         String pengarang = scanner.nextLine();
         
         System.out.println("Pilih Genre:");
-        // Loop menampilkan daftar genre dari database CSV
         for (int i = 0; i < CariBerdasarkanGenre.GENRE_LIST.size(); i++) {
             System.out.println((i + 1) + ". " + CariBerdasarkanGenre.GENRE_LIST.get(i));
         }
-        // Menyediakan opsi dinamis di baris paling bawah untuk menambah genre baru
         System.out.println((CariBerdasarkanGenre.GENRE_LIST.size() + 1) + ". [Tambah / Ketik Genre Baru]");
         System.out.print("Pilihan angka genre: ");
         int indexGenre = membacaInputAngka() - 1;
         
         String genre = "";
-        // Jika memilih opsi paling bawah (Tambah Genre Baru)
         if (indexGenre == CariBerdasarkanGenre.GENRE_LIST.size()) {
             System.out.print("Masukkan nama Genre Baru yang ingin ditambahkan: ");
             String genreBaruInput = scanner.nextLine();
             if (!genreBaruInput.trim().isEmpty()) {
-                // Simpan permanen ke file genre.csv lewat method baru di database
-                LibraryDatabase.getInstance().simpanGenreBaruKeCSV(genreBaruInput);
+                LibraryDatabase.getInstance().simpanGenreBaruKeCSV(genreBaruInput); // Pastikan method ini ada di LibraryDatabase!
                 genre = genreBaruInput.trim();
             } else {
                 genre = "Umum";

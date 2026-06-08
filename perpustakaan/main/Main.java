@@ -33,7 +33,7 @@ public class Main {
         boolean berjalan = true;
         while (berjalan) {
             System.out.println("\n==================================================");
-            System.out.println("  PORTAL UTAMA PERPUSTAKAAN (AUTENTIKASI CSV)");
+            System.out.println("           PORTAL UTAMA PERPUSTAKAAN ");
             System.out.println("==================================================");
             System.out.println("1. Masuk Ke Akun Anda");
             System.out.println("2. Registrasi Anggota Baru");

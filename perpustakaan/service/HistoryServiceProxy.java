@@ -33,10 +33,10 @@ public class HistoryServiceProxy implements HistoryService {
     @Override
     public void lihatSemuaRiwayatTransaksi() {
         // PROTEKSI: Hanya Pustakawan yang boleh mengaudit seluruh transaksi sistem
-        if (userRoleSaatIni.equalsIgnoreCase("PUSTAKAWAN")) {
+        if (userRoleSaatIni.equalsIgnoreCase("ADMIN")) {
             realHistoryService.lihatSemuaRiwayatTransaksi();
         } else {
-            System.out.println("\n[PROXY ERROR]: Akses Ditolak! Riwayat global hanya bisa dibuka oleh PUSTAKAWAN.");
+            System.out.println("\n[PROXY ERROR]: Akses Ditolak! Riwayat global hanya bisa dibuka oleh ADMIN.");
         }
     }
 }

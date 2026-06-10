@@ -57,7 +57,6 @@ public class LibraryServiceImpl implements LibraryService {
         System.out.println("[SISTEM]: Berhasil mendaftarkan buku \"" + buku.getJudul() + "\" ke database.");
     }
 
-    // Mengembalikan status kelayakan (Boolean) agar kelas Main tahu transaksinya sukses/gagal
     @Override
     public boolean pinjamBukuLayanan(String idBuku, String namaAnggota) {
         Buku buku = db.ambilBukuBerdasarkanId(idBuku);
@@ -70,7 +69,13 @@ public class LibraryServiceImpl implements LibraryService {
         buku.pinjamBuku(); 
         String stateAkhir = buku.getState().getStatusName();
 
-        return !stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Dipinjam");
+
+        if (!stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Dipinjam")) {
+            db.simpanKeFile();
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -85,11 +90,11 @@ public class LibraryServiceImpl implements LibraryService {
         buku.kembalikanBuku(); 
         String stateAkhir = buku.getState().getStatusName();
 
-        return !stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Tersedia");
-    }
+        if (!stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Tersedia")) {
+            db.simpanKeFile();
+            return true;
+        }
 
-    @Override
-    public boolean hapusBukuLayanan(String idBuku) {
-        return db.hapusBukuBerdasarkanId(idBuku);
+        return false;
     }
 }

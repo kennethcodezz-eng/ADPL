@@ -303,6 +303,14 @@ public class LibraryDatabase {
                 Transaksi trx = new Transaksi(data[0], data[1], data[2], data[3]);
                 trx.setStatusTransaksi(data[4].trim());
                 daftarTransaksi.add(trx);
+
+                // Pastikan status buku konsisten dengan transaksi aktif.
+                if (trx.getStatusTransaksi().equalsIgnoreCase("DIPINJAM")) {
+                    Buku buku = tabelBuku.get(trx.getIdBuku());
+                    if (buku != null && !buku.getState().getStatusName().equalsIgnoreCase("Dipinjam")) {
+                        buku.setState(new DipinjamState());
+                    }
+                }
             }
         } catch (IOException e) { }
     }

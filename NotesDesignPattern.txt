@@ -1,0 +1,40 @@
+1. Singleton Pattern
+Kelas yang menerapkan: UserDatabase dan LibraryDatabase (di dalam package com.perpustakaan.core).
+
+Kenapa cocok dipakai?
+Aplikasi perpustakaan ini membaca dan menulis data langsung ke file fisik CSV (users.csv, buku_fisik.csv, dll). Jika objek database dibuat berkali-kali (banyak instance), akan terjadi risiko tabrakan data (data corruption) atau pemborosan memori RAM karena file yang sama dibaca berulang-ulang.
+Dengan Singleton Pattern, kita menjamin hanya ada satu objek database tunggal yang hidup di dalam memori sejak aplikasi dinyalakan hingga dimatikan. Semua kelas lain (seperti Main atau ServiceImpl) dipaksa menggunakan objek yang sama melalui fungsi getInstance().
+
+2. Factory Pattern (Creational)
+Kelas yang menerapkan: BukuFactory (di dalam package com.perpustakaan.core).
+
+Kenapa cocok dipakai?
+Perpustakaanmu mengelola beberapa jenis buku yang karakternya berbeda (BukuFisik butuh lokasi rak, sedangkan EBook butuh informasi ukuran file digital). Tanpa Factory Pattern, kelas Main harus dipenuhi oleh logika if-else yang rumit.
+BukuFactory bertindak sebagai pabrik pusat. Kelas lain cukup mengirimkan teks parameter seperti "FISIK" atau "EBOOK", dan pabrik ini yang akan otomatis membuat objek buku yang tepat.
+
+3. State Pattern (Behavioral)
+Kelas yang menerapkan: BukuState (Interface), TersediaState, dan DipinjamState (di dalam package com.perpustakaan.state).
+
+Kenapa cocok dipakai?
+Buku memiliki perilaku yang berubah tergantung statusnya. Jika buku berstatus Tersedia, dia bisa dipinjam tetapi tidak bisa dikembalikan. Sebaliknya, jika berstatus Dipinjam, dia bisa dikembalikan tetapi tidak bisa dipinjam oleh orang lain lagi. Jika menggunakan if-else di dalam kelas Buku, kodenya akan menjadi sangat panjang. State Pattern memisahkan logika perilaku ini ke dalam kelasnya sendiri (TersediaState dan DipinjamState). Buku cukup mengganti objek statusnya secara dinamis (buku.setState()).
+
+4. Decorator Pattern (Structural)
+Kelas yang menerapkan: BukuDecorator (Abstract Class) dan BukuLangkaDecorator (di dalam package com.perpustakaan.model).
+
+Kenapa cocok dipakai?
+Di sistem ini, ada kebutuhan untuk menandai buku tertentu sebagai "Koleksi Langka" yang membebankan tarif denda khusus saat terlambat dikembalikan. Masalahnya, baik BukuFisik maupun EBook sama-sama bisa berstatus sebagai koleksi langka.
+Jika kita menggunakan inheritance biasa, kita harus membuat kelas baru seperti BukuFisikLangka dan EBookLangka, yang menyebabkan jumlah kelas membengkak. Dengan Decorator Pattern, kita bisa "membungkus" objek buku apa saja secara dinamis saat aplikasi berjalan untuk menambahkan informasi denda khusus tanpa mengubah struktur dasar objek asli di dalamnya.
+
+5. Proxy Pattern (Structural)
+Kelas yang menerapkan: LibraryServiceProxy dan HistoryServiceProxy (di dalam package com.perpustakaan.service).
+
+Kenapa cocok dipakai?
+Sistem perpustakaan ini memiliki tingkatan hak akses pengguna (Role Management) yaitu GUEST, ANGGOTA, dan PUSTAKAWAN. Sesuai standar keamanan, Anggota tidak boleh menambah koleksi buku, dan Guest tidak boleh meminjam buku maupun mengaudit seluruh riwayat transaksi perpustakaan.
+Proxy Pattern berperan sebagai "satpam pelindung" di lapisan terdepan sebelum perintah masuk ke komponen bisnis asli (ServiceImpl). Proksi akan memeriksa variabel userRoleSaat Ini. Jika tidak memenuhi syarat, akses langsung diblokir di tempat. Hal ini membuat kelas logika bisnis asli tetap fokus pada tugas intinya tanpa tercampur oleh kode pengecekan keamanan (Separation of Concerns).
+
+6. Strategy Pattern (Behavioral)
+Kelas yang menerapkan: PencarianStrategy (Interface), CariBerdasarkanJudul, dan CariBerdasarkanGenre (di dalam package com.perpustakaan.strategy).
+
+Kenapa cocok dipakai?
+Aplikasi menyediakan lebih dari satu algoritma untuk mencari buku (bisa lewat teks judul atau memilih kategori genre). Di masa mendatang, perpustakaan pasti ingin menambah cara pencarian baru, seperti berdasarkan nama pengarang atau nomor ISBN.
+Dengan Strategy Pattern, kita membuat algoritma pencarian tersebut menjadi "bisa dibongkar-pasang" (interchangeable). Lapisan servis hanya tahu interface PencarianStrategy, sedangkan objek konkrit pencariannya dikirim secara fleksibel dari kelas Main. Hal ini membuat aplikasi kita sangat mudah diperluas tanpa risiko merusak fitur pencarian yang sudah berjalan stabil.

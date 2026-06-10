@@ -161,16 +161,27 @@ public class Main {
             System.out.println("\n--- DASHBOARD PUSTAKAWAN ---");
             System.out.println("1. Lihat Semua Koleksi Buku");
             System.out.println("2. Tambah / Daftarkan Buku Baru");
-            System.out.println("3. Lihat Semua Riwayat Transaksi Global");
-            System.out.println("4. Logout");
-            System.out.print("Pilih menu (1-4): ");
+            System.out.println("3. Hapus Buku dari Koleksi");
+            System.out.println("4. Lihat Semua Riwayat Transaksi Global");
+            System.out.println("5. Logout");
+            System.out.print("Pilih menu (1-5): ");
 
             int opsi = membacaInputAngka();
             switch (opsi) {
                 case 1: libraryProxy.lihatSemuaBuku(); break;
                 case 2: prosesInputBukuBaru(); break;
-                case 3: historyProxy.lihatSemuaRiwayatTransaksi(); break;
-                case 4:
+                case 3:
+                    System.out.print("Masukkan ID Buku yang ingin dihapus: ");
+                    String idHapus = scanner.nextLine();
+                    boolean suksesHapus = libraryProxy.hapusBukuLayanan(idHapus);
+                    if (suksesHapus) {
+                        System.out.println("[SISTEM]: Buku berhasil dihapus dari perpustakaan.");
+                    } else {
+                        System.out.println("[SISTEM]: Gagal menghapus buku. Pastikan ID benar.");
+                    }
+                    break;
+                case 4: historyProxy.lihatSemuaRiwayatTransaksi(); break;
+                case 5:
                     diMenuPustakawan = false;
                     currentRole = "GUEST";
                     namaUserAktif = "";
@@ -204,7 +215,7 @@ public class Main {
         System.out.print("Masukkan Tipe Buku (FISIK / EBOOK): ");
         String tipe = scanner.nextLine().toUpperCase();
         
-        String id = LibraryDatabase.getInstance().generateNextBookId();
+        String id = LibraryDatabase.getInstance().dapatkanIdBaruOtomatis();
         System.out.println("ID Buku Otomatis Dibuat: " + id);
 
         System.out.print("Masukkan Judul Buku: ");

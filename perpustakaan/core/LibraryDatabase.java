@@ -47,8 +47,19 @@ public class LibraryDatabase {
         return instance;
     }
 
-    public String generateNextBookId() {
-        return "B" + String.format("%02d", counterBuku++);
+    // Fungsi profesional untuk mencari ID terkecil yang kosong/bolong di tengah
+    public String dapatkanIdBaruOtomatis() {
+        int checkId = 1;
+        while (true) {
+            // Format angka menjadi format 2 digit, misal: B01, B02
+            String kandidatId = "B" + String.format("%02d", checkId);
+            
+            // Jika ID ini BELUM dipake (berarti bolong atau ini batas akhir), pakai ID ini!
+            if (!tabelBuku.containsKey(kandidatId)) {
+                return kandidatId;
+            }
+            checkId++;
+        }
     }
 
     private void updateCounterBuku(String id) {
@@ -295,4 +306,13 @@ public class LibraryDatabase {
             }
         } catch (IOException e) { }
     }
+
+    public boolean hapusBukuBerdasarkanId(String id) {
+    if (tabelBuku.containsKey(id)) {
+        tabelBuku.remove(id);
+        simpanKeFile(); // Menulis ulang CSV tanpa buku yang dihapus
+        return true;
+    }
+    return false;
+}
 }

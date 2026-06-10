@@ -87,4 +87,9 @@ public class LibraryServiceImpl implements LibraryService {
 
         return !stateAwal.equals(stateAkhir) && stateAkhir.equalsIgnoreCase("Tersedia");
     }
+
+    @Override
+    public boolean hapusBukuLayanan(String idBuku) {
+        return db.hapusBukuBerdasarkanId(idBuku);
+    }
 }

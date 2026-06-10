@@ -11,4 +11,5 @@ public interface LibraryService {
     // Mengubah return type menjadi boolean untuk pelaporan status ke Main & HistoryService
     boolean pinjamBukuLayanan(String idBuku, String namaAnggota);
     boolean kembalikanBukuLayanan(String idBuku, String namaAnggota);
+    boolean hapusBukuLayanan(String idBuku);
 }

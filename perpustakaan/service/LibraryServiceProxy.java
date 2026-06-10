@@ -43,11 +43,22 @@ public class LibraryServiceProxy implements LibraryService {
     @Override
     public void daftarkanBukuBaru(Buku buku) {
         // PROTEKSI KEAMANAN PROXY: Memblokir Anggota agar tidak bisa menambah koleksi buku
-        if (userRoleSaatIni.equalsIgnoreCase("PUSTAKAWAN")) {
+        if (userRoleSaatIni.equalsIgnoreCase("ADMIN")) {
             realService.daftarkanBukuBaru(buku);
         } else {
             System.out.println("\n[PROXY ERROR]: Akses Ditolak! Peran Anda saat ini: " + userRoleSaatIni + ".");
-            System.out.println("               Fitur 'Tambah Buku Baru' hanya diizinkan untuk PUSTAKAWAN.");
+            System.out.println("               Fitur 'Tambah Buku Baru' hanya diizinkan untuk ADMIN.");
+        }
+    }
+
+    @Override
+    public boolean hapusBukuLayanan(String idBuku) {
+        // PROTEKSI: Hanya role ADMIN yang diizinkan menghapus data dari sistem
+        if (userRoleSaatIni.equalsIgnoreCase("ADMIN")) {
+            return realService.hapusBukuLayanan(idBuku);
+        } else {
+            System.out.println("[AKSES DITOLAK]: Hanya Admin yang boleh menghapus buku!");
+            return false;
         }
     }
 }
